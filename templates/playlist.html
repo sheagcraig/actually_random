@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}
+			<h1>{{ name }}</h1>
+{% endblock %}
+{% block data %}
+			<ol>
+			{% for item in sorted_array%}
+				<li> {{ item }} </li>
+			{% endfor %}
+			</ol>
+{% endblock %}

@@ -68,7 +68,8 @@ class AccessToken(object):
 def get_oauth():
     prefs = get_prefs()
     return spotipy.oauth2.SpotifyOAuth(
-        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE)
+        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE,
+        cache_path=".tokens")
 
 
 def get_prefs():
@@ -104,7 +105,8 @@ def tracks(playlist_id):
         track_names.extend([track["track"]["name"] for track in
                             tracks["items"]])
 
-    return render_template("index.html", sorted_array=track_names)
+    return render_template("playlist.html", name=results["name"],
+                           sorted_array=track_names)
 
 
 @app.route("/callback/q")

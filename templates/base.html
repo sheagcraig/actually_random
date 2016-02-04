@@ -22,12 +22,10 @@
   </head>
   <body>
 		<div class="container">
-			<h1>This is how we do it</h1>
-			<ol>
-			{% for item in sorted_array%}
-				<li> {{ item }} </li>
-			{% endfor %}
-			</ol>
+			{% block title %}
+			{% endblock %}
+			{% block data %}
+			{% endblock %}
 		</div>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
