@@ -22,12 +22,23 @@
   </head>
   <body>
 		<div class="container">
-			<h1>This is how we do it</h1>
-			<ol>
-			{% for item in sorted_array%}
-				<li> {{ item }} </li>
-			{% endfor %}
-			</ol>
+			<h1>Choose a playlist to randomize. For reals.</h1>
+			<!-- Single button -->
+			<div class="btn-group">
+				<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+					Playlists <span class="caret"></span>
+				</button>
+				<ul class="dropdown-menu">
+					{% for item in sorted_array %}
+						<li><a href="../playlist/{{ item.id }}">{{ item.name }}</a></li>
+					{% endfor %}
+				</ul>
+			</div>
+			<!-- <ul class="nav nav-pills nav-stacked"> -->
+			<!-- {% for item in sorted_array %} -->
+			<!-- <li role="presentation"><a href="#">{{ item }}</a></li> -->
+			<!-- {% endfor %} -->
+			<!-- </ul> -->
 		</div>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
