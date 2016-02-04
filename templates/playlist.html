@@ -1,12 +1,23 @@
 {% extends "base.html" %}
 {% block title %}
+<div class="jumbotron">
+	<div class="row">
+		<div class="col-xs-6">
 			<h1>{{ name }}</h1>
+			<p>Place where you'll change the name: <em>{{ name }}</em></p>
+			<p><a class="btn btn-primary btn-lg" href="#" role="button">Save Playlist</a></p>
+		</div>
+		<div class="col-xs-6">
 			<img src={{ images[1].url }}></img>
+		</div>
+	</div>
+</div>
 {% endblock %}
 {% block data %}
 <!-- Columns are always 50% wide, on mobile and desktop -->
 <div class="row">
   <div class="col-xs-6">
+			<h3>Original Playlist</h3>
 			<ol>
 			{% for item in sorted_array %}
 				<li> {{ item }} </li>
@@ -14,6 +25,7 @@
 			</ol>
 	</div>
   <div class="col-xs-6">
+			<h3>Shuffled Playlist</h3>
 			<ol>
 			{% for item in shuffled_array %}
 				<li> {{ item }} </li>
