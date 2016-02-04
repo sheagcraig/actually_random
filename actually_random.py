@@ -32,7 +32,9 @@ what you actually wanted.
 """
 
 import base64
+import copy
 import json
+import random
 import urllib
 
 from flask import Flask, request, redirect, g, render_template
@@ -43,7 +45,7 @@ from spotipy import util
 
 app = Flask(__name__)
 
-# Server-side Parameters
+# Flask Parameters
 CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 8080
 REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
@@ -75,6 +77,11 @@ def get_prefs():
     return prefs
 
 
+def finish_auth(auth_token):
+    sp_oauth = get_oauth()
+    response_data = sp_oauth.get_access_token(auth_token)
+
+
 @app.route("/")
 def index():
     sp_oauth = get_oauth()
@@ -84,13 +91,7 @@ def index():
 # TODO: What is this q?
 @app.route("/callback/q")
 def callback():
-    # Auth Step 4: Requests refresh and access tokens
-    auth_token = request.args['code']
-
-    # # Auth Step 5: Tokens are Returned to Application
-    sp_oauth = get_oauth()
-    response_data = sp_oauth.get_access_token(auth_token)
-
+    finish_auth(request.args["code"])
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
     results = spotify.user_playlists(user_id)
@@ -108,10 +109,8 @@ def callback():
 
 @app.route("/playlist/<playlist_id>")
 def tracks(playlist_id):
-    # sp = spotipy.Spotify(AccessToken.access_token)
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
-    # TODO: Grab a playlist id...
     results = spotify.user_playlist(user_id, playlist_id)
 
     tracks = results["tracks"]
@@ -120,9 +119,13 @@ def tracks(playlist_id):
         tracks = spotify.next(tracks)
         track_names.extend([track["track"]["name"] for track in
                             tracks["items"]])
+    shuffled_names = copy.copy(track_names)
+    random.shuffle(shuffled_names)
 
     return render_template("playlist.html", name=results["name"],
-                           sorted_array=track_names)
+                           sorted_array=track_names,
+                           shuffled_array=shuffled_names,
+                           images=results["images"])
 
 
 if __name__ == "__main__":

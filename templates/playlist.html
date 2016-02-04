@@ -1,11 +1,24 @@
 {% extends "base.html" %}
 {% block title %}
 			<h1>{{ name }}</h1>
+			<img src={{ images[1].url }}></img>
 {% endblock %}
 {% block data %}
+<!-- Columns are always 50% wide, on mobile and desktop -->
+<div class="row">
+  <div class="col-xs-6">
 			<ol>
-			{% for item in sorted_array%}
+			{% for item in sorted_array %}
 				<li> {{ item }} </li>
 			{% endfor %}
 			</ol>
+	</div>
+  <div class="col-xs-6">
+			<ol>
+			{% for item in shuffled_array %}
+				<li> {{ item }} </li>
+			{% endfor %}
+			</ol>
+	</div>
+</div>
 {% endblock %}
