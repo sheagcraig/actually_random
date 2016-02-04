@@ -50,26 +50,17 @@ REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "playlist-modify-public playlist-modify-private"
 
 
-class AccessToken(object):
-    """Stores a Spotify access token."""
-    _access_token = None
-
-    @property
-    @classmethod
-    def access_token(cls):
-        return cls._access_token
-
-    @access_token.setter
-    @classmethod
-    def access_token(cls, access_token):
-        cls._access_token = access_token
-
-
 def get_oauth():
     prefs = get_prefs()
     return spotipy.oauth2.SpotifyOAuth(
         prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE,
         cache_path=".tokens")
+
+
+def get_spotify():
+    oauth = get_oauth()
+    token_info = oauth.get_cached_token()
+    return spotipy.Spotify(token_info["access_token"])
 
 
 def get_prefs():
@@ -90,25 +81,7 @@ def index():
     return redirect(sp_oauth.get_authorize_url())
 
 
-@app.route("/playlist/<playlist_id>")
-def tracks(playlist_id):
-    # TODO: Probably need to use the refresh token here.
-    sp = spotipy.Spotify(AccessToken.access_token)
-    user_id = sp.current_user()["id"]
-    # TODO: Grab a playlist id...
-    results = sp.user_playlist(user_id, playlist_id)
-
-    tracks = results["tracks"]
-    track_names = [track["track"]["name"] for track in tracks["items"]]
-    while tracks["next"]:
-        tracks = sp.next(tracks)
-        track_names.extend([track["track"]["name"] for track in
-                            tracks["items"]])
-
-    return render_template("playlist.html", name=results["name"],
-                           sorted_array=track_names)
-
-
+# TODO: What is this q?
 @app.route("/callback/q")
 def callback():
     # Auth Step 4: Requests refresh and access tokens
@@ -118,8 +91,7 @@ def callback():
     sp_oauth = get_oauth()
     response_data = sp_oauth.get_access_token(auth_token)
 
-    AccessToken.access_token = response_data["access_token"]
-    spotify = spotipy.Spotify(AccessToken.access_token)
+    spotify = get_spotify()
     user_id = spotify.current_user()["id"]
     results = spotify.user_playlists(user_id)
 
@@ -132,6 +104,25 @@ def callback():
                                for playlist in results])
 
     return render_template("playlists.html", sorted_array=playlist_names)
+
+
+@app.route("/playlist/<playlist_id>")
+def tracks(playlist_id):
+    # sp = spotipy.Spotify(AccessToken.access_token)
+    spotify = get_spotify()
+    user_id = spotify.current_user()["id"]
+    # TODO: Grab a playlist id...
+    results = spotify.user_playlist(user_id, playlist_id)
+
+    tracks = results["tracks"]
+    track_names = [track["track"]["name"] for track in tracks["items"]]
+    while tracks["next"]:
+        tracks = spotify.next(tracks)
+        track_names.extend([track["track"]["name"] for track in
+                            tracks["items"]])
+
+    return render_template("playlist.html", name=results["name"],
+                           sorted_array=track_names)
 
 
 if __name__ == "__main__":
