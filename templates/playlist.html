@@ -2,12 +2,18 @@
 {% block title %}
 <div class="jumbotron">
 	<div class="row">
-		<div class="col-xs-6">
+		<div class="col-md-6">
 			<h1>{{ name }}</h1>
-			<p>Place where you'll change the name: <em>{{ name }}</em></p>
-			<p><a class="btn btn-primary btn-lg" href="#" role="button">Save Playlist</a></p>
+			<p>Enter a name to save new playlist:</p>
+			<form class="form-inline">
+				<div class="form-group">
+					<label class="sr-only" for="new-name"></label>
+					<input type="new-name" class="form-control" id="new-name" placeholder="Shuffled {{ name }}">
+				</div>
+				<button type="submit" class="btn btn-primary">Save Playlist</button>
+			</form>
 		</div>
-		<div class="col-xs-6">
+		<div class="col-md-6">
 			<img src={{ images[1].url }}></img>
 		</div>
 	</div>
@@ -16,7 +22,7 @@
 {% block data %}
 <!-- Columns are always 50% wide, on mobile and desktop -->
 <div class="row">
-  <div class="col-xs-6">
+  <div class="col-md-6">
 			<h3>Original Playlist</h3>
 			<ol>
 			{% for item in sorted_array %}
@@ -24,7 +30,7 @@
 			{% endfor %}
 			</ol>
 	</div>
-  <div class="col-xs-6">
+  <div class="col-md-6">
 			<h3>Shuffled Playlist</h3>
 			<ol>
 			{% for item in shuffled_array %}
