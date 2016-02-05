@@ -37,11 +37,12 @@ import json
 import random
 import urllib
 
-from flask import Flask, request, redirect, g, render_template, url_for, session, flash
+from flask import (Flask, request, redirect, g, render_template, url_for,
+                   session, flash)
 from flask.ext.bootstrap import Bootstrap
 from flask.ext.wtf import Form
 from wtforms import StringField, SubmitField
-from wtforms.validators import Required
+from wtforms.validators import Required, NoneOf
 
 import requests
 import spotipy
@@ -56,11 +57,6 @@ CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 8080
 REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "playlist-modify-public playlist-modify-private"
-
-
-class PlaylistNameForm(Form):
-    name = StringField("Playlist Name", validators=[Required()])
-    submit = SubmitField("Save")
 
 
 def get_oauth():
@@ -116,6 +112,8 @@ def callback():
         playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
                                for playlist in results])
 
+    session["playlist_names"] = [item["name"] for item in playlist_names]
+    print(playlist_names)
     return render_template("playlists.html", sorted_array=playlist_names)
 
 
@@ -124,8 +122,16 @@ def tracks(playlist_id):
     # TODO: Need to handle not clobbering an existing playlist with an error
     # flash.
     # TODO: Refactor
+    class PlaylistNameForm(Form):
+        name = StringField("Playlist Name", validators=[
+            Required(), NoneOf(session["playlist_names"],
+                               message="That name is already in use!")])
+        submit = SubmitField("Save")
+
     form = PlaylistNameForm()
     if form.validate_on_submit():
+        # If the playlist form is valid, save the new playlist and
+        # redirect to playlist page.
         session["new_playlist_name"] = form.name.data
         print("Going to save {} with contents:".format(form.name.data))
         for track in session["shuffled"]:
@@ -136,7 +142,7 @@ def tracks(playlist_id):
 
     if (playlist_id == session.get("playlist_id") and
         all(key in session for key in
-            ("original", "shuffled", "name", "images")):
+            ("original", "shuffled", "name", "images"))):
         track_names = session["original"]
         name = session["name"]
         shuffled_names = session["shuffled"]
