@@ -37,8 +37,12 @@ import json
 import random
 import urllib
 
-from flask import Flask, request, redirect, g, render_template, url_for
+from flask import Flask, request, redirect, g, render_template, url_for, session, flash
 from flask.ext.bootstrap import Bootstrap
+from flask.ext.wtf import Form
+from wtforms import StringField, SubmitField
+from wtforms.validators import Required
+
 import requests
 import spotipy
 from spotipy import util
@@ -52,6 +56,11 @@ CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 8080
 REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "playlist-modify-public playlist-modify-private"
+
+
+class PlaylistNameForm(Form):
+    name = StringField("Playlist Name", validators=[Required()])
+    submit = SubmitField("Save")
 
 
 def get_oauth():
@@ -68,13 +77,14 @@ def get_spotify():
 
 
 def get_prefs():
-    """Get application prefs plist.
+    """Get application prefs plist and set secret key.
 
     Args:
         path: String path to a plist file.
     """
     with open("config.json") as prefs_file:
         prefs = json.load(prefs_file)
+    app.secret_key = prefs["SecretKey"]
 
     return prefs
 
@@ -109,8 +119,16 @@ def callback():
     return render_template("playlists.html", sorted_array=playlist_names)
 
 
-@app.route("/playlist/<playlist_id>")
+@app.route("/playlist/<playlist_id>", methods=["GET", "POST"])
 def tracks(playlist_id):
+    form = PlaylistNameForm()
+    if form.validate_on_submit():
+        # new_playlist_name = form.name.data
+        print(form.name.data)
+        session["saved"] = True
+        form.name.data = ""
+        return redirect(url_for("tracks", playlist_id=playlist_id))
+
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
     results = spotify.user_playlist(user_id, playlist_id)
@@ -121,13 +139,21 @@ def tracks(playlist_id):
         tracks = spotify.next(tracks)
         track_names.extend([track["track"]["name"] for track in
                             tracks["items"]])
-    shuffled_names = copy.copy(track_names)
-    random.shuffle(shuffled_names)
+    if session.get("shuffled"):
+        shuffled_names = session["shuffled"]
+    else:
+        shuffled_names = copy.copy(track_names)
+        random.shuffle(shuffled_names)
+        session["shuffled"] = shuffled_names
+
+    if session.get("saved"):
+        flash("Playlist '{}' saved.".format("TEST"))
 
     return render_template("playlist.html", name=results["name"],
                            sorted_array=track_names,
                            shuffled_array=shuffled_names,
-                           images=results["images"])
+                           images=results["images"],
+                           form=form)
 
 
 if __name__ == "__main__":
