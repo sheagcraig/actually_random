@@ -37,7 +37,7 @@ import json
 import random
 import urllib
 
-from flask import Flask, request, redirect, g, render_template
+from flask import Flask, request, redirect, g, render_template, url_for
 from flask.ext.bootstrap import Bootstrap
 import requests
 import spotipy
