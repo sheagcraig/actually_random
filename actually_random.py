@@ -55,7 +55,7 @@ bootstrap = Bootstrap(app)
 # Flask Parameters
 CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 8080
-REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+REDIRECT_URI = "{}:{}/playlists".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "playlist-modify-public playlist-modify-private"
 
 
@@ -96,9 +96,13 @@ def index():
     return redirect(sp_oauth.get_authorize_url())
 
 
-# TODO: What is this q?
-@app.route("/callback/q")
-def callback():
+@app.route("/playlists")
+def playlists():
+    if session.get("saved"):
+        flash("Playlist '{}' saved.".format(session["new_playlist_name"]))
+        session["saved"] = False
+        del session["new_playlist_name"]
+
     finish_auth(request.args["code"])
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
@@ -118,10 +122,9 @@ def callback():
 
 
 @app.route("/playlist/<playlist_id>", methods=["GET", "POST"])
-def tracks(playlist_id):
-    # TODO: Need to handle not clobbering an existing playlist with an error
-    # flash.
+def shuffle_playlist(playlist_id):
     # TODO: Refactor
+
     class PlaylistNameForm(Form):
         name = StringField("Playlist Name", validators=[
             Required(), NoneOf(session["playlist_names"],
@@ -129,6 +132,7 @@ def tracks(playlist_id):
         submit = SubmitField("Save")
 
     form = PlaylistNameForm()
+
     if form.validate_on_submit():
         # If the playlist form is valid, save the new playlist and
         # redirect to playlist page.
@@ -138,7 +142,7 @@ def tracks(playlist_id):
             print("\t" + track)
         session["saved"] = True
         form.name.data = ""
-        return redirect(url_for("tracks", playlist_id=playlist_id))
+        return redirect(url_for("index"))
 
     if (playlist_id == session.get("playlist_id") and
         all(key in session for key in
@@ -170,11 +174,6 @@ def tracks(playlist_id):
         shuffled_names = copy.copy(track_names)
         random.shuffle(shuffled_names)
         session["shuffled"] = shuffled_names
-
-    if session.get("saved"):
-        flash("Playlist '{}' saved.".format(session["new_playlist_name"]))
-        session["saved"] = False
-        del session["new_playlist_name"]
 
     return render_template(
         "playlist.html", name=name, sorted_array=track_names,
