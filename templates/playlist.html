@@ -19,15 +19,20 @@
   <div class="col-md-6">
 			<h3>Original Playlist</h3>
 			<ol>
-			{% for item in sorted_array %}
+			{% for item in track_names %}
 				<li> {{ item }} </li>
 			{% endfor %}
 			</ol>
 	</div>
   <div class="col-md-6">
-			<h3>Shuffled Playlist</h3>
+		<!-- <h3 class="h3">Shuffled Playlist</h3> -->
+		<form action="" class="form-inline" method="post" name="shuffle">
+			<label><h3 class="h3">Shuffled Playlist</h3></label>
+			<button type="submit" class="btn btn-primary" name="Shuffle"
+				value="Shuffle Again">Shuffle Again</button>
+		</form>
 			<ol>
-			{% for item in shuffled_array %}
+			{% for item in shuffled_names %}
 				<li> {{ item }} </li>
 			{% endfor %}
 			</ol>

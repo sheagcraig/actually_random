@@ -99,6 +99,7 @@ def index():
 @app.route("/playlists")
 def playlists():
     if session.get("saved"):
+        # Notify user of success and clean up session vars.
         flash("Playlist '{}' saved.".format(session["new_playlist_name"]))
         session["saved"] = False
         del session["new_playlist_name"]
@@ -122,20 +123,28 @@ def playlists():
 
 
 @app.route("/playlist/<playlist_id>", methods=["GET", "POST"])
-def shuffle_playlist(playlist_id):
-    # TODO: Refactor
+def view_playlist(playlist_id):
+    """Shuffle a playlist and allow user to save to a new playlist."""
 
     class PlaylistNameForm(Form):
+        """Form for getting new playlist name.
+
+        Will not accept existing playlist names.
+        """
         name = StringField("Playlist Name", validators=[
             Required(), NoneOf(session["playlist_names"],
                                message="That name is already in use!")])
         submit = SubmitField("Save")
 
     form = PlaylistNameForm()
+    # shuffle_form = ShuffleForm()
 
-    if form.validate_on_submit():
+    if "Shuffle" in request.form:
+        print("HIT")
+        return redirect(url_for("shuffle_playlist"))
+    elif form.validate_on_submit():
         # If the playlist form is valid, save the new playlist and
-        # redirect to playlist page.
+        # redirect to playlists page.
         session["new_playlist_name"] = form.name.data
         print("Going to save {} with contents:".format(form.name.data))
         for track in session["shuffled"]:
@@ -144,9 +153,10 @@ def shuffle_playlist(playlist_id):
         form.name.data = ""
         return redirect(url_for("index"))
 
+    # Don't hit spotify for info we already have.
+    keys = ("original", "shuffled", "name", "images")
     if (playlist_id == session.get("playlist_id") and
-        all(key in session for key in
-            ("original", "shuffled", "name", "images"))):
+            all(key in session for key in keys)):
         track_names = session["original"]
         name = session["name"]
         shuffled_names = session["shuffled"]
@@ -176,8 +186,15 @@ def shuffle_playlist(playlist_id):
         session["shuffled"] = shuffled_names
 
     return render_template(
-        "playlist.html", name=name, sorted_array=track_names,
-        shuffled_array=shuffled_names, images=images, form=form)
+        "playlist.html", name=name, track_names=track_names,
+        shuffled_names=shuffled_names, images=images, form=form)
+
+
+@app.route("/shuffle", methods=["GET"])
+def shuffle_playlist():
+    random.shuffle(session["shuffled"])
+    session["reshuffled"] = True
+    return redirect(url_for("view_playlist", playlist_id=session["playlist_id"]))
 
 
 if __name__ == "__main__":
