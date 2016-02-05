@@ -38,12 +38,14 @@ import random
 import urllib
 
 from flask import Flask, request, redirect, g, render_template
+from flask.ext.bootstrap import Bootstrap
 import requests
 import spotipy
 from spotipy import util
 
 
 app = Flask(__name__)
+bootstrap = Bootstrap(app)
 
 # Flask Parameters
 CLIENT_SIDE_URL = "http://127.0.0.1"
