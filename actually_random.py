@@ -121,39 +121,58 @@ def callback():
 
 @app.route("/playlist/<playlist_id>", methods=["GET", "POST"])
 def tracks(playlist_id):
+    # TODO: Need to handle not clobbering an existing playlist with an error
+    # flash.
+    # TODO: Refactor
     form = PlaylistNameForm()
     if form.validate_on_submit():
-        # new_playlist_name = form.name.data
-        print(form.name.data)
+        session["new_playlist_name"] = form.name.data
+        print("Going to save {} with contents:".format(form.name.data))
+        for track in session["shuffled"]:
+            print("\t" + track)
         session["saved"] = True
         form.name.data = ""
         return redirect(url_for("tracks", playlist_id=playlist_id))
 
-    spotify = get_spotify()
-    user_id = spotify.current_user()["id"]
-    results = spotify.user_playlist(user_id, playlist_id)
-
-    tracks = results["tracks"]
-    track_names = [track["track"]["name"] for track in tracks["items"]]
-    while tracks["next"]:
-        tracks = spotify.next(tracks)
-        track_names.extend([track["track"]["name"] for track in
-                            tracks["items"]])
-    if session.get("shuffled"):
+    if (playlist_id == session.get("playlist_id") and
+        all(key in session for key in
+            ("original", "shuffled", "name", "images")):
+        track_names = session["original"]
+        name = session["name"]
         shuffled_names = session["shuffled"]
+        images = session["images"]
     else:
+        session["playlist_id"] = playlist_id
+        spotify = get_spotify()
+        user_id = spotify.current_user()["id"]
+        results = spotify.user_playlist(user_id, playlist_id)
+
+        tracks = results["tracks"]
+        track_names = [track["track"]["name"] for track in tracks["items"]]
+        while tracks["next"]:
+            tracks = spotify.next(tracks)
+            track_names.extend([track["track"]["name"] for track in
+                                tracks["items"]])
+        session["original"] = track_names
+
+        session["name"] = results["name"]
+        name = session["name"]
+
+        session["images"] = results["images"]
+        images = session["images"]
+
         shuffled_names = copy.copy(track_names)
         random.shuffle(shuffled_names)
         session["shuffled"] = shuffled_names
 
     if session.get("saved"):
-        flash("Playlist '{}' saved.".format("TEST"))
+        flash("Playlist '{}' saved.".format(session["new_playlist_name"]))
+        session["saved"] = False
+        del session["new_playlist_name"]
 
-    return render_template("playlist.html", name=results["name"],
-                           sorted_array=track_names,
-                           shuffled_array=shuffled_names,
-                           images=results["images"],
-                           form=form)
+    return render_template(
+        "playlist.html", name=name, sorted_array=track_names,
+        shuffled_array=shuffled_names, images=images, form=form)
 
 
 if __name__ == "__main__":
