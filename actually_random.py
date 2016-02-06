@@ -152,9 +152,12 @@ def view_playlist(playlist_id):
         print("Going to save {} with contents:".format(form.name.data))
         # TODO: We need to get the private/public status of the playlist
         # to copy to the new one.
-        # spotify.user_playlist_create(user_id, session["new_playlist_name"])
-        new_playlist_id = get_playlist_by_name(session["new_playlist_name"])
-        # spotify.user_playlist_add_tracks(user_id, new_playlist_id, tracks)
+        spotify.user_playlist_create(user_id, session["new_playlist_name"])
+        new_playlist_id = get_playlist_id_by_name(session["new_playlist_name"])
+        print(user_id, new_playlist_id, [item[1] for item in
+                                         session["shuffled"]])
+        spotify.user_playlist_add_tracks(
+            user_id, new_playlist_id, [item[1] for item in session["shuffled"]])
         session["saved"] = True
         form.name.data = ""
         return redirect(url_for("index"))
@@ -177,7 +180,8 @@ def view_playlist(playlist_id):
             tracks = spotify.next(tracks)
             track_info.extend(tracks["items"])
 
-        track_names = [(track["track"]["name"], track["track"]["id"]) for track in track_info]
+        track_names = [(track["track"]["name"], track["track"]["id"]) for track
+                       in track_info]
         session["original"] = track_names
 
         session["name"] = results["name"]
@@ -207,11 +211,22 @@ def get_names(tracks):
 
 
 def get_user_playlists():
-    pass
+    spotify = get_spotify()
+    user_id = spotify.current_user()["id"]
+    results = spotify.user_playlists(user_id)
+
+    playlists = results["items"]
+    playlist_names = [{"id": playlist["id"], "name": playlist["name"]} for
+                      playlist in playlists]
+    while results["next"]:
+        results = sp.next(playlists)
+        playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
+                               for playlist in results])
+    return playlist_names
 
 
-def get_playlist_by_name(name):
-    pass
+def get_playlist_id_by_name(name):
+    return [playlist["id"] for playlist in get_user_playlists() if playlist["name"] == name][0]
 
 
 if __name__ == "__main__":
