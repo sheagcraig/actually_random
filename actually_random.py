@@ -118,7 +118,8 @@ def playlists():
                                for playlist in results])
 
     session["playlist_names"] = [item["name"] for item in playlist_names]
-    print(playlist_names)
+    if "playlist_id" in session:
+        del session["playlist_id"]
     return render_template("playlists.html", sorted_array=playlist_names)
 
 
@@ -137,18 +138,23 @@ def view_playlist(playlist_id):
         submit = SubmitField("Save")
 
     form = PlaylistNameForm()
-    # shuffle_form = ShuffleForm()
 
+    spotify = get_spotify()
+    user_id = spotify.current_user()["id"]
+
+    # TODO: Seems to be jumping to previous playlists!
     if "Shuffle" in request.form:
-        print("HIT")
         return redirect(url_for("shuffle_playlist"))
     elif form.validate_on_submit():
         # If the playlist form is valid, save the new playlist and
         # redirect to playlists page.
         session["new_playlist_name"] = form.name.data
         print("Going to save {} with contents:".format(form.name.data))
-        for track in session["shuffled"]:
-            print("\t" + track)
+        # TODO: We need to get the private/public status of the playlist
+        # to copy to the new one.
+        # spotify.user_playlist_create(user_id, session["new_playlist_name"])
+        new_playlist_id = get_playlist_by_name(session["new_playlist_name"])
+        # spotify.user_playlist_add_tracks(user_id, new_playlist_id, tracks)
         session["saved"] = True
         form.name.data = ""
         return redirect(url_for("index"))
@@ -163,16 +169,15 @@ def view_playlist(playlist_id):
         images = session["images"]
     else:
         session["playlist_id"] = playlist_id
-        spotify = get_spotify()
-        user_id = spotify.current_user()["id"]
         results = spotify.user_playlist(user_id, playlist_id)
 
         tracks = results["tracks"]
-        track_names = [track["track"]["name"] for track in tracks["items"]]
+        track_info = tracks["items"]
         while tracks["next"]:
             tracks = spotify.next(tracks)
-            track_names.extend([track["track"]["name"] for track in
-                                tracks["items"]])
+            track_info.extend(tracks["items"])
+
+        track_names = [(track["track"]["name"], track["track"]["id"]) for track in track_info]
         session["original"] = track_names
 
         session["name"] = results["name"]
@@ -186,8 +191,8 @@ def view_playlist(playlist_id):
         session["shuffled"] = shuffled_names
 
     return render_template(
-        "playlist.html", name=name, track_names=track_names,
-        shuffled_names=shuffled_names, images=images, form=form)
+        "playlist.html", name=name, track_names=get_names(track_names),
+        shuffled_names=get_names(shuffled_names), images=images, form=form)
 
 
 @app.route("/shuffle", methods=["GET"])
@@ -195,6 +200,18 @@ def shuffle_playlist():
     random.shuffle(session["shuffled"])
     session["reshuffled"] = True
     return redirect(url_for("view_playlist", playlist_id=session["playlist_id"]))
+
+
+def get_names(tracks):
+    return [track[0] for track in tracks]
+
+
+def get_user_playlists():
+    pass
+
+
+def get_playlist_by_name(name):
+    pass
 
 
 if __name__ == "__main__":
