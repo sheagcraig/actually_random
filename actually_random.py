@@ -110,14 +110,9 @@ def playlists():
     results = spotify.user_playlists(user_id)
 
     playlists = results["items"]
-    playlist_names = [{"id": playlist["id"], "name": playlist["name"],
-                       "images": playlist["images"]} for playlist in playlists]
-    while results["next"]:
-        results = sp.next(playlists)
-        playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
-                               for playlist in results])
-
+    playlist_names = get_user_playlists()
     session["playlist_names"] = [item["name"] for item in playlist_names]
+
     if "playlist_id" in session:
         del session["playlist_id"]
     return render_template("playlists.html", sorted_array=playlist_names)
@@ -216,8 +211,8 @@ def get_user_playlists():
     results = spotify.user_playlists(user_id)
 
     playlists = results["items"]
-    playlist_names = [{"id": playlist["id"], "name": playlist["name"]} for
-                      playlist in playlists]
+    playlist_names = [{"id": playlist["id"], "name": playlist["name"],
+                       "images": playlist["images"]} for playlist in playlists]
     while results["next"]:
         results = sp.next(playlists)
         playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
