@@ -56,7 +56,8 @@ bootstrap = Bootstrap(app)
 CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 8080
 REDIRECT_URI = "{}:{}/playlists".format(CLIENT_SIDE_URL, PORT)
-SCOPE = "playlist-modify-public playlist-modify-private"
+SCOPE = ("playlist-modify-public playlist-modify-private "
+         "playlist-read-collaborative playlist-read-private")
 
 
 def get_oauth():
@@ -150,7 +151,7 @@ def view_playlist(playlist_id):
         new_playlist_name = form.name.data
         # TODO: We need to get the private/public status of the playlist
         # to copy to the new one.
-        spotify.user_playlist_create(user_id, new_playlist_name)
+        spotify.user_playlist_create(user_id, new_playlist_name, public=results["public"])
         new_playlist_id = get_playlist_id_by_name(new_playlist_name)
         # You can add up to 100 tracks per request.
         all_tracks = [track_names[item][1] for item in session["shuffled"]]
