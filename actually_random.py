@@ -110,8 +110,8 @@ def playlists():
     results = spotify.user_playlists(user_id)
 
     playlists = results["items"]
-    playlist_names = [{"id": playlist["id"], "name": playlist["name"]} for
-                      playlist in playlists]
+    playlist_names = [{"id": playlist["id"], "name": playlist["name"],
+                       "images": playlist["images"]} for playlist in playlists]
     while results["next"]:
         results = sp.next(playlists)
         playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
