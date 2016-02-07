@@ -113,8 +113,9 @@ def playlists():
     playlist_names = get_user_playlists()
     session["playlist_names"] = [item["name"] for item in playlist_names]
 
-    if "playlist_id" in session:
-        del session["playlist_id"]
+    # TODO remove
+    # if "playlist_id" in session:
+    #     del session["playlist_id"]
     return render_template("playlists.html", sorted_array=playlist_names)
 
 
@@ -136,63 +137,72 @@ def view_playlist(playlist_id):
 
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
-
-    # TODO: Seems to be jumping to previous playlists!
-    if "Shuffle" in request.form:
-        # TODO: Just redirect to this route (if you remove the below TODO if.
-        return redirect(url_for("shuffle_playlist"))
-    elif form.validate_on_submit():
-        # If the playlist form is valid, save the new playlist and
-        # redirect to playlists page.
-        session["new_playlist_name"] = form.name.data
-        print("Going to save {} with contents:".format(form.name.data))
-        # TODO: We need to get the private/public status of the playlist
-        # to copy to the new one.
-        spotify.user_playlist_create(user_id, session["new_playlist_name"])
-        new_playlist_id = get_playlist_id_by_name(session["new_playlist_name"])
-        print(user_id, new_playlist_id, [item[1] for item in
-                                         session["shuffled"]])
-        spotify.user_playlist_add_tracks(
-            user_id, new_playlist_id, [item[1] for item in session["shuffled"]])
-        session["saved"] = True
-        form.name.data = ""
-        return redirect(url_for("index"))
-
-    session["playlist_id"] = playlist_id
     results = spotify.user_playlist(user_id, playlist_id)
 
     tracks = results["tracks"]
     track_info = tracks["items"]
+    # Spotify returns results in a pager; get next results if more than
+    # 100 returned.
     while tracks["next"]:
         tracks = spotify.next(tracks)
         track_info.extend(tracks["items"])
 
     track_names = [(track["track"]["name"], track["track"]["id"]) for track
                     in track_info]
-    session["original"] = track_names
 
-    session["name"] = results["name"]
-    name = session["name"]
+    if "Shuffle" in request.form:
+        return redirect(url_for("view_playlist", playlist_id=playlist_id))
+    elif form.validate_on_submit():
+        # If the playlist form is valid, save the new playlist and
+        # redirect to playlists page.
+        session["new_playlist_name"] = form.name.data
+        # TODO: We need to get the private/public status of the playlist
+        # to copy to the new one.
+        spotify.user_playlist_create(user_id, session["new_playlist_name"])
+        new_playlist_id = get_playlist_id_by_name(session["new_playlist_name"])
+        # You can add up to 100 tracks per request.
+        all_tracks = [track_names[item][1] for item in session["shuffled"]]
+        for tracks in get_tracks_for_add(all_tracks):
+            spotify.user_playlist_add_tracks(user_id, new_playlist_id, tracks)
+        session["saved"] = True
+        return redirect(url_for("index"))
 
+    name = session["name"] = results["name"]
     images = results["images"]
-
-    shuffled_names = copy.copy(track_names)
-    random.shuffle(shuffled_names)
-    session["shuffled"] = shuffled_names
-    # TODO: Max cookie size is about 4096K. Need to just save sequence, not
-    # all of the data.
-    print("Size = %s" % len(str(shuffled_names)))
+    session["shuffled"] = get_shuffle(track_names)
+    shuffled_names = [track_names[index] for index in session["shuffled"]]
 
     return render_template(
         "playlist.html", name=name, track_names=get_names(track_names),
         shuffled_names=get_names(shuffled_names), images=images, form=form)
 
 
-@app.route("/shuffle", methods=["GET"])
-def shuffle_playlist():
-    random.shuffle(session["shuffled"])
-    session["reshuffled"] = True
-    return redirect(url_for("view_playlist", playlist_id=session["playlist_id"]))
+def get_tracks_for_add(tracks):
+    index = 0
+    output = []
+    while index < len(tracks):
+        output.append(tracks[index])
+        if len(output) == 100 or index == len(tracks) - 1:
+            yield output
+            output = []
+        index += 1
+
+
+def get_shuffle(tracks):
+    """Return a shuffling sequence.
+
+    Because we can't fit large playlists into the session cookie, we
+    only store a shuffling pattern, i.e. a sequence of indices.
+
+    Args:
+        tracks: An iterable.
+
+    Returns:
+        A tuple of shuffled indexes.
+    """
+    sequence = list(range(len(tracks)))
+    random.shuffle(sequence)
+    return sequence
 
 
 def get_names(tracks):
@@ -215,7 +225,8 @@ def get_user_playlists():
 
 
 def get_playlist_id_by_name(name):
-    return [playlist["id"] for playlist in get_user_playlists() if playlist["name"] == name][0]
+    return [playlist["id"] for playlist in get_user_playlists() if
+            playlist["name"] == name][0]
 
 
 if __name__ == "__main__":
