@@ -158,40 +158,30 @@ def view_playlist(playlist_id):
         form.name.data = ""
         return redirect(url_for("index"))
 
-    # TODO: This is probably unnecessary.
-    # Don't hit spotify for info we already have.
-    keys = ("original", "shuffled", "name", "images")
-    if (playlist_id == session.get("playlist_id") and
-            all(key in session for key in keys)):
-        track_names = session["original"]
-        name = session["name"]
-        shuffled_names = session["shuffled"]
-        # images = session["images"]
-    else:
-        session["playlist_id"] = playlist_id
-        results = spotify.user_playlist(user_id, playlist_id)
+    session["playlist_id"] = playlist_id
+    results = spotify.user_playlist(user_id, playlist_id)
 
-        tracks = results["tracks"]
-        track_info = tracks["items"]
-        while tracks["next"]:
-            tracks = spotify.next(tracks)
-            track_info.extend(tracks["items"])
+    tracks = results["tracks"]
+    track_info = tracks["items"]
+    while tracks["next"]:
+        tracks = spotify.next(tracks)
+        track_info.extend(tracks["items"])
 
-        track_names = [(track["track"]["name"], track["track"]["id"]) for track
-                       in track_info]
-        session["original"] = track_names
+    track_names = [(track["track"]["name"], track["track"]["id"]) for track
+                    in track_info]
+    session["original"] = track_names
 
-        session["name"] = results["name"]
-        name = session["name"]
+    session["name"] = results["name"]
+    name = session["name"]
 
-        images = results["images"]
+    images = results["images"]
 
-        shuffled_names = copy.copy(track_names)
-        random.shuffle(shuffled_names)
-        session["shuffled"] = shuffled_names
-        # TODO: Max cookie size is about 4096K. Need to just save sequence, not
-        # all of the data.
-        print("Size = %s" % len(str(shuffled_names)))
+    shuffled_names = copy.copy(track_names)
+    random.shuffle(shuffled_names)
+    session["shuffled"] = shuffled_names
+    # TODO: Max cookie size is about 4096K. Need to just save sequence, not
+    # all of the data.
+    print("Size = %s" % len(str(shuffled_names)))
 
     return render_template(
         "playlist.html", name=name, track_names=get_names(track_names),
