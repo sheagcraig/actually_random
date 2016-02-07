@@ -92,18 +92,13 @@ def finish_auth(auth_token):
 
 @app.route("/")
 def index():
+    # TODO: Probably should add a Login page?
     sp_oauth = get_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
 
 @app.route("/playlists")
 def playlists():
-    if session.get("saved"):
-        # Notify user of success and clean up session vars.
-        flash("Playlist '{}' saved.".format(session["new_playlist_name"]))
-        session["saved"] = False
-        del session["new_playlist_name"]
-
     finish_auth(request.args["code"])
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
@@ -113,9 +108,6 @@ def playlists():
     playlist_names = get_user_playlists()
     session["playlist_names"] = [item["name"] for item in playlist_names]
 
-    # TODO remove
-    # if "playlist_id" in session:
-    #     del session["playlist_id"]
     return render_template("playlists.html", sorted_array=playlist_names)
 
 
@@ -155,16 +147,16 @@ def view_playlist(playlist_id):
     elif form.validate_on_submit():
         # If the playlist form is valid, save the new playlist and
         # redirect to playlists page.
-        session["new_playlist_name"] = form.name.data
+        new_playlist_name = form.name.data
         # TODO: We need to get the private/public status of the playlist
         # to copy to the new one.
-        spotify.user_playlist_create(user_id, session["new_playlist_name"])
-        new_playlist_id = get_playlist_id_by_name(session["new_playlist_name"])
+        spotify.user_playlist_create(user_id, new_playlist_name)
+        new_playlist_id = get_playlist_id_by_name(new_playlist_name)
         # You can add up to 100 tracks per request.
         all_tracks = [track_names[item][1] for item in session["shuffled"]]
         for tracks in get_tracks_for_add(all_tracks):
             spotify.user_playlist_add_tracks(user_id, new_playlist_id, tracks)
-        session["saved"] = True
+        flash("Playlist '{}' saved.".format(new_playlist_name))
         return redirect(url_for("index"))
 
     name = session["name"] = results["name"]
