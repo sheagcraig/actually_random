@@ -139,6 +139,7 @@ def view_playlist(playlist_id):
 
     # TODO: Seems to be jumping to previous playlists!
     if "Shuffle" in request.form:
+        # TODO: Just redirect to this route (if you remove the below TODO if.
         return redirect(url_for("shuffle_playlist"))
     elif form.validate_on_submit():
         # If the playlist form is valid, save the new playlist and
@@ -157,6 +158,7 @@ def view_playlist(playlist_id):
         form.name.data = ""
         return redirect(url_for("index"))
 
+    # TODO: This is probably unnecessary.
     # Don't hit spotify for info we already have.
     keys = ("original", "shuffled", "name", "images")
     if (playlist_id == session.get("playlist_id") and
@@ -164,7 +166,7 @@ def view_playlist(playlist_id):
         track_names = session["original"]
         name = session["name"]
         shuffled_names = session["shuffled"]
-        images = session["images"]
+        # images = session["images"]
     else:
         session["playlist_id"] = playlist_id
         results = spotify.user_playlist(user_id, playlist_id)
@@ -182,12 +184,14 @@ def view_playlist(playlist_id):
         session["name"] = results["name"]
         name = session["name"]
 
-        session["images"] = results["images"]
-        images = session["images"]
+        images = results["images"]
 
         shuffled_names = copy.copy(track_names)
         random.shuffle(shuffled_names)
         session["shuffled"] = shuffled_names
+        # TODO: Max cookie size is about 4096K. Need to just save sequence, not
+        # all of the data.
+        print("Size = %s" % len(str(shuffled_names)))
 
     return render_template(
         "playlist.html", name=name, track_names=get_names(track_names),
