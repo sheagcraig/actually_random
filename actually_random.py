@@ -60,6 +60,20 @@ SCOPE = ("playlist-modify-public playlist-modify-private "
          "playlist-read-collaborative playlist-read-private")
 
 
+class PlaylistNameForm(Form):
+    """Form for getting new playlist name.
+
+    Will not accept existing playlist names.
+    """
+    name = StringField("Playlist Name", validators=[Required()])
+    submit = SubmitField("Save")
+
+    def __init__(self, playlist_names):
+        super(PlaylistNameForm, self).__init__()
+        self.name.validators.append(
+            NoneOf(playlist_names, message="That name is already in use!"))
+
+
 def get_oauth():
     prefs = get_prefs()
     return spotipy.oauth2.SpotifyOAuth(
@@ -101,32 +115,15 @@ def index():
 @app.route("/playlists")
 def playlists():
     finish_auth(request.args["code"])
-    spotify = get_spotify()
-    user_id = spotify.current_user()["id"]
-    results = spotify.user_playlists(user_id)
-
-    playlists = results["items"]
-    playlist_names = get_user_playlists()
-    session["playlist_names"] = [item["name"] for item in playlist_names]
-
-    return render_template("playlists.html", sorted_array=playlist_names)
+    playlists = get_user_playlists()
+    session["playlist_names"] = [playlist["name"] for playlist in playlists]
+    return render_template("playlists.html", playlists=playlists)
 
 
 @app.route("/playlist/<playlist_id>", methods=["GET", "POST"])
 def view_playlist(playlist_id):
     """Shuffle a playlist and allow user to save to a new playlist."""
-
-    class PlaylistNameForm(Form):
-        """Form for getting new playlist name.
-
-        Will not accept existing playlist names.
-        """
-        name = StringField("Playlist Name", validators=[
-            Required(), NoneOf(session["playlist_names"],
-                               message="That name is already in use!")])
-        submit = SubmitField("Save")
-
-    form = PlaylistNameForm()
+    form = PlaylistNameForm(session["playlist_names"])
 
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
@@ -207,6 +204,7 @@ def get_user_playlists():
     user_id = spotify.current_user()["id"]
     results = spotify.user_playlists(user_id)
 
+    # TODO: Refactor
     playlists = results["items"]
     playlist_names = [{"id": playlist["id"], "name": playlist["name"],
                        "images": playlist["images"]} for playlist in playlists]
