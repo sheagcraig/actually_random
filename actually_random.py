@@ -27,26 +27,21 @@ I want all of my jams, and I want them to not repeat until I have had
 the auditory satisfaction of enjoying each and every one.
 
 This script allows you to copy an existing playlist after randomizing
-the tracks. You can then play without shuffle and get the equivalent of
-what you actually wanted.
+the tracks. You can then play with shuffle _turned off_ and get the
+equivalent of what you actually wanted.
 """
 
-import base64
-import copy
 import json
 import random
-import urllib
 
-from flask import (Flask, request, redirect, g, render_template, url_for,
+from flask import (Flask, request, redirect, render_template, url_for,
                    session, flash)
 from flask.ext.bootstrap import Bootstrap
 from flask.ext.wtf import Form
+import spotipy
+import spotipy.oauth2
 from wtforms import StringField, SubmitField
 from wtforms.validators import Required, NoneOf
-
-import requests
-import spotipy
-from spotipy import util
 
 
 app = Flask(__name__)
@@ -74,47 +69,22 @@ class PlaylistNameForm(Form):
             NoneOf(playlist_names, message="That name is already in use!"))
 
 
-def get_oauth():
-    prefs = get_prefs()
-    return spotipy.oauth2.SpotifyOAuth(
-        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE,
-        cache_path=".tokens")
-
-
-def get_spotify():
-    oauth = get_oauth()
-    token_info = oauth.get_cached_token()
-    return spotipy.Spotify(token_info["access_token"])
-
-
-def get_prefs():
-    """Get application prefs plist and set secret key.
-
-    Args:
-        path: String path to a plist file.
-    """
-    with open("config.json") as prefs_file:
-        prefs = json.load(prefs_file)
-    app.secret_key = prefs["SecretKey"]
-
-    return prefs
-
-
-def finish_auth(auth_token):
-    sp_oauth = get_oauth()
-    response_data = sp_oauth.get_access_token(auth_token)
-
-
 @app.route("/")
 def index():
+    """Redirect user to Spotify login/auth."""
     # TODO: Probably should add a Login page?
     sp_oauth = get_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
 
 @app.route("/playlists")
-def playlists():
-    finish_auth(request.args["code"])
+def playlist_selection():
+    """Render playlists as buttons to choose from."""
+    # This is the route which the Spotify OAuth redirects to.
+    # We finish getting an access token here.
+    if request.args.get("code"):
+        get_spotify(request.args["code"])
+
     playlists = get_user_playlists()
     session["playlist_names"] = [playlist["name"] for playlist in playlists]
     return render_template("playlists.html", playlists=playlists)
@@ -137,18 +107,15 @@ def view_playlist(playlist_id):
         tracks = spotify.next(tracks)
         track_info.extend(tracks["items"])
 
-    track_names = [(track["track"]["name"], track["track"]["id"]) for track
-                    in track_info]
+    track_names = [(track["track"]["name"], track["track"]["id"]) for track in
+                   track_info]
 
     if "Shuffle" in request.form:
         return redirect(url_for("view_playlist", playlist_id=playlist_id))
     elif form.validate_on_submit():
-        # If the playlist form is valid, save the new playlist and
-        # redirect to playlists page.
         new_playlist_name = form.name.data
-        # TODO: We need to get the private/public status of the playlist
-        # to copy to the new one.
-        spotify.user_playlist_create(user_id, new_playlist_name, public=results["public"])
+        spotify.user_playlist_create(user_id, new_playlist_name,
+                                     public=results["public"])
         new_playlist_id = get_playlist_id_by_name(new_playlist_name)
         # You can add up to 100 tracks per request.
         all_tracks = [track_names[item][1] for item in session["shuffled"]]
@@ -160,22 +127,63 @@ def view_playlist(playlist_id):
     name = session["name"] = results["name"]
     images = results["images"]
     session["shuffled"] = get_shuffle(track_names)
-    shuffled_names = [track_names[index] for index in session["shuffled"]]
+    shuffled_names = [track_names[idx] for idx in session["shuffled"]]
 
     return render_template(
         "playlist.html", name=name, track_names=get_names(track_names),
         shuffled_names=get_names(shuffled_names), images=images, form=form)
 
 
+def get_oauth():
+    """Return a Spotipy Oauth2 object."""
+    prefs = get_prefs()
+    return spotipy.oauth2.SpotifyOAuth(
+        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE,
+        cache_path=".tokens")
+
+
+def get_spotify(auth_token=None):
+    """Return an authenticated Spotify object."""
+    oauth = get_oauth()
+    token_info = oauth.get_cached_token()
+    if not token_info and auth_token:
+        token_info = oauth.get_access_token(auth_token)
+    return spotipy.Spotify(token_info["access_token"])
+
+
+def get_prefs():
+    """Get application prefs plist and set secret key.
+
+    Args:
+        path: String path to a plist file.
+    """
+    with open("config.json") as prefs_file:
+        prefs = json.load(prefs_file)
+    app.secret_key = prefs["SecretKey"]
+
+    return prefs
+
+
 def get_tracks_for_add(tracks):
-    index = 0
+    """Break list of tracks into 100 track lists.
+
+    This is a generator, so you can iterate over it.
+
+    Args:
+        tracks: List of track name/id/images tuples.
+    Returns:
+        List of 100 or less tracks.
+    Raises:
+        StopIteration when tracks are consumed.
+    """
+    idx = 0
     output = []
-    while index < len(tracks):
-        output.append(tracks[index])
-        if len(output) == 100 or index == len(tracks) - 1:
+    while idx < len(tracks):
+        output.append(tracks[idx])
+        if len(output) == 100 or idx == len(tracks) - 1:
             yield output
             output = []
-        index += 1
+        idx += 1
 
 
 def get_shuffle(tracks):
@@ -196,26 +204,28 @@ def get_shuffle(tracks):
 
 
 def get_names(tracks):
+    """Return just the name component of a list of name/id tuples."""
     return [track[0] for track in tracks]
 
 
 def get_user_playlists():
+    """Return an id, name, images tuple of a user's playlists."""
     spotify = get_spotify()
     user_id = spotify.current_user()["id"]
     results = spotify.user_playlists(user_id)
 
-    # TODO: Refactor
     playlists = results["items"]
+    while results["next"]:
+        results = spotify.next(results)
+        playlists.extend(results["items"])
+
     playlist_names = [{"id": playlist["id"], "name": playlist["name"],
                        "images": playlist["images"]} for playlist in playlists]
-    while results["next"]:
-        results = sp.next(playlists)
-        playlist_names.extend([{"id": playlist["id"], "name": playlist["name"]}
-                               for playlist in results])
     return playlist_names
 
 
 def get_playlist_id_by_name(name):
+    """Return the id for a playlist with name: 'name'."""
     return [playlist["id"] for playlist in get_user_playlists() if
             playlist["name"] == name][0]
 
