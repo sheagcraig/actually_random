@@ -57,3 +57,6 @@ This project is a quick Flask app. It uses the flask-bootstrap and
 flask-wtforms plugins, as well as the Spotipy API wrapper for Spotify.
 
 Bootstrap provides styling, and WTForms handles form validation.
+
+### Diamond Dave
+![Diamond Dave](https://github.com/sheagcraig/actually_random/blob/master/screenshots/flying.gif)
