@@ -17,6 +17,11 @@ This script allows you to copy an existing playlist after randomizing
 the tracks. You can then play with shuffle _turned off_ and get the
 equivalent of what you actually wanted.
 
+![Playlists](https://github.com/sheagcraig/actually_random/blob/master/screenshots/playlists.png)
+Playlist selection view.
+![Playlist](https://github.com/sheagcraig/actually_random/blob/master/screenshots/playlist.png)
+Playlist shuffle view.
+
 ## Setting it Up
 Git clone the project and get into that beautiful new directory.
 
