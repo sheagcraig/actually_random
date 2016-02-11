@@ -1,26 +1,35 @@
 # Actually Random
 
 ## Introduction
-I like to rip mountain bike trails to my giant Spotify playlist,
-"Bottomless Happiness". Unfortunately, Spotify's "shuffle" play feature
-is not really random. The algorithm is not public information, but some
-tracks get played more frequently than others. If you play the playlist
-during a ride one day, then ride the next day, chances are extremely
-high that you'll hear a lot of the same songs again.
+I like to rip mountain bike trails to my giant Spotify playlist, "Bottomless
+Happiness". Unfortunately, Spotify's "shuffle" play feature is not really
+random. The algorithm is not public information, but some tracks get played
+more frequently than others, probably based on the popularity of a track. 
+
+At times, you will even hear the same track twice during one extended ride. I
+have about 500 songs on this playlist, with a length of 24 hours and 29
+minutes, and yet I somehow manage to hear "Running With the Devil" every damn
+time.
+
+Further, the play queue is deleted after some session timeout or the app is
+shutdown, so that if you ride two days in a row, you'll probably hear a lot of
+the same songs that you heard the previous day.
 
 This is annoying to me.
 
 I want all of my jams, and I want them to not repeat until I have had
 the auditory satisfaction of enjoying each and every one.
 
-This script allows you to copy an existing playlist after randomizing
-the tracks. You can then play with shuffle _turned off_ and get the
-equivalent of what you actually wanted.
+As a quick practice project in Flask, I wrote Actually Random to allow you to
+select a playlist, shuffle it up, and then save it with a new name.  
 
+Then, when you go out to ride or run or whatever, play the new playlist without
+using the shuffle feature.
+
+### Playlist selection view.
 ![Playlists](https://github.com/sheagcraig/actually_random/blob/master/screenshots/playlists.png)
-Playlist selection view.
+### Playlist shuffle view.
 ![Playlist](https://github.com/sheagcraig/actually_random/blob/master/screenshots/playlist.png)
-Playlist shuffle view.
 
 ## Setting it Up
 Git clone the project and get into that beautiful new directory.
