@@ -130,7 +130,8 @@ def view_playlist(playlist_id):
                                      public=results["public"])
         new_playlist_id = get_playlist_id_by_name(new_playlist_name)
         # You can add up to 100 tracks per request.
-        all_tracks = [track_names[item][1] for item in session["shuffled"]]
+        all_tracks = [track_names[item][1] for item in session["shuffled"] if
+                      track_names[item][1] is not None]
         for tracks in get_tracks_for_add(all_tracks):
             spotify.user_playlist_add_tracks(user_id, new_playlist_id, tracks)
         flash("Playlist '{}' saved.".format(new_playlist_name))
